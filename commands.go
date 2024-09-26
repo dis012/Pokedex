@@ -1,15 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 )
 
 // help command which displays all available commands and ther functions
-func helpCommand(cnf *config) error {
+func helpCommand(cnf *Config) error {
 	commands := getCommands() // map[string]cliCommand
 	if commands == nil {
 		return fmt.Errorf("no commands found")
@@ -21,107 +18,53 @@ func helpCommand(cnf *config) error {
 }
 
 // exit command which exits the program
-func exitCommand(cnf *config) error {
+func exitCommand(cnf *Config) error {
 	fmt.Println("Exiting program")
 	os.Exit(0)
 	return nil
 }
 
-func getFirstPage(cnf *config) error {
-	res, err := http.Get("https://pokeapi.co/api/v2/location-area/")
-	if err != nil {
-		return fmt.Errorf("error getting first page: %v", err)
+// map command which displays a list of locations
+func mapCommand(cnfg *Config) error {
+	location := PokeMap{}
+	if cnfg.NextPage == nil {
+		location, err := cnfg.PokeClient.ListLocations(nil)
+		if err != nil {
+			return fmt.Errorf("error getting locations: %v", err)
+		}
+		for _, loc := range location.Results {
+			fmt.Println(loc.Name)
+		}
+		cnfg.NextPage = &location.NextPage
+		return nil
 	}
 
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode > 299 {
-		return fmt.Errorf("error getting first page: %s", body)
-	}
+	location, err := cnfg.PokeClient.ListLocations(cnfg.NextPage)
 	if err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
+		return fmt.Errorf("error getting locations: %v", err)
 	}
-
-	err = json.Unmarshal(body, cnf)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling response: %v", err)
+	for _, loc := range location.Results {
+		fmt.Println(loc.Name)
 	}
-
+	cnfg.NextPage = &location.NextPage
+	cnfg.PrevPage = &location.PrevPage
 	return nil
 }
 
-// map command which displays a list of locations
-func mapCommand(cnfg *config) error {
-	if cnfg.NextPage == "" {
-		err := getFirstPage(cnfg)
-		if err != nil {
-			return fmt.Errorf("error getting first page: %v", err)
-		}
-
-		fmt.Println("Locations:")
-		if cnfg.Results == nil {
-			return fmt.Errorf("no results found")
-		}
-		for _, loc := range cnfg.Results {
-			fmt.Println(loc.Name)
-		}
-		return nil
-	} else {
-		res, err := http.Get(cnfg.NextPage)
-		if err != nil {
-			return fmt.Errorf("error getting next page: %v", err)
-		}
-
-		body, err := io.ReadAll(res.Body)
-		defer res.Body.Close()
-		if res.StatusCode > 299 {
-			return fmt.Errorf("error getting next page: %s", body)
-		}
-		if err != nil {
-			return fmt.Errorf("error reading response body: %v", err)
-		}
-
-		err = json.Unmarshal(body, cnfg)
-		if err != nil {
-			return fmt.Errorf("error unmarshalling response: %v", err)
-		}
-
-		fmt.Println("Locations:")
-		for _, loc := range cnfg.Results {
-			fmt.Println(loc.Name)
-		}
-
+func mapCommandBack(cnf *Config) error {
+	if cnf.PrevPage == nil {
+		fmt.Println("No previous page")
 		return nil
 	}
-}
 
-func mapCommandBack(cnf *config) error {
-	if cnf.PrevPage == "" {
-		return fmt.Errorf("no previous page found")
-	}
-	res, err := http.Get(cnf.PrevPage)
+	location, err := cnf.PokeClient.ListLocations(cnf.PrevPage)
 	if err != nil {
-		return fmt.Errorf("error getting previous page: %v", err)
+		return fmt.Errorf("error getting locations: %v", err)
 	}
-
-	body, err := io.ReadAll(res.Body)
-	defer res.Body.Close()
-	if res.StatusCode > 299 {
-		return fmt.Errorf("error getting previous page: %s", body)
-	}
-	if err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
-	}
-
-	err = json.Unmarshal(body, cnf)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling response: %v", err)
-	}
-
-	fmt.Println("Locations:")
-	for _, loc := range cnf.Results {
+	for _, loc := range location.Results {
 		fmt.Println(loc.Name)
 	}
-
+	cnf.NextPage = &location.NextPage
+	cnf.PrevPage = &location.PrevPage
 	return nil
 }

@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
+
+	"pokedexcli/cache"
 )
 
 // cliCommand struct which holds the name, description and command function and
@@ -10,7 +14,21 @@ import (
 type cliCommand struct {
 	Name        string
 	Description string
-	Command     func(cnf *config) error
+	Command     func(cnf *Config) error
+}
+
+type client struct {
+	cache cache.Cache
+	http  http.Client
+}
+
+func newClient(timeout, interval time.Duration) client {
+	return client{
+		cache: cache.NewCache(interval),
+		http: http.Client{
+			Timeout: timeout,
+		},
+	}
 }
 
 // map all available commands to their respective functions
@@ -46,9 +64,8 @@ func getInput() string {
 	return input
 }
 
-func startCLI() {
+func (c *client) startCLI(cnf *Config) {
 	commands := getCommands()
-	var cnf config
 
 	for {
 		fmt.Print("Pokedex > ")
@@ -63,7 +80,7 @@ func startCLI() {
 			continue
 		}
 
-		err := cliCommand.Command(&cnf)
+		err := cliCommand.Command(cnf)
 		if err != nil {
 			fmt.Println("Error executing command:", err)
 			continue
