@@ -1,35 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"net/http"
+	"os"
 	"strings"
-	"time"
-
-	"pokedexcli/cache"
 )
-
-// cliCommand struct which holds the name, description and command function and
-// is used to store all available commands
-type cliCommand struct {
-	Name        string
-	Description string
-	Command     func(cnf *Config) error
-}
-
-type client struct {
-	cache cache.Cache
-	http  http.Client
-}
-
-func newClient(timeout, interval time.Duration) client {
-	return client{
-		cache: cache.NewCache(interval),
-		http: http.Client{
-			Timeout: timeout,
-		},
-	}
-}
 
 // map all available commands to their respective functions
 func getCommands() map[string]cliCommand {
@@ -54,26 +30,34 @@ func getCommands() map[string]cliCommand {
 			Description: "Displays a list of previous locations",
 			Command:     mapCommandBack,
 		},
+		"explore": {
+			Name:        "Explore",
+			Description: "Explore a location and find pokemons in that location",
+			Command:     exploreCommand,
+		},
 	}
-}
-
-// getInput function which reads input from the user
-func getInput() string {
-	var input string
-	fmt.Scanln(&input)
-	return input
 }
 
 func (c *client) startCLI(cnf *Config) {
 	commands := getCommands()
-
+	reader := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
-		command := strings.ToLower(getInput())
-		if len(command) == 0 {
+		reader.Scan()
+
+		command := strings.ToLower(reader.Text())
+		words := strings.Fields(command)
+		if len(words) == 0 {
 			continue
 		}
-		cliCommand, ok := commands[command]
+
+		word := words[0]
+
+		if word == "explore" && len(words) > 1 {
+			location := words[1]
+			cnf.Location = location
+		}
+		cliCommand, ok := commands[word]
 
 		if !ok {
 			fmt.Println("Invalid command")

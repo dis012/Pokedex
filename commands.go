@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 )
 
@@ -66,5 +69,47 @@ func mapCommandBack(cnf *Config) error {
 	}
 	cnf.NextPage = &location.NextPage
 	cnf.PrevPage = &location.PrevPage
+	return nil
+}
+
+func exploreCommand(cnf *Config) error {
+	fmt.Println("Exploring ", cnf.Location)
+	var pokemon Pokemon
+	if cnf.Location == "" {
+		fmt.Println("No location provided")
+		return nil
+	}
+
+	// Check if the location exists in the cache
+	err := cnf.checkLocation()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	// Get the pokemons in the location
+	url := API_URL + cnf.Location
+	res, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("error getting pokemons: %v", err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if res.StatusCode > 299 {
+		return fmt.Errorf("error getting pokemons: %s", body)
+	}
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+
+	err = json.Unmarshal(body, &pokemon)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling response: %v", err)
+	}
+
+	for _, pok := range pokemon.PokemonEncounters {
+		fmt.Println(pok.Pokemon.Name)
+	}
+
 	return nil
 }

@@ -9,7 +9,7 @@ func (c *Cache) Add(key string, val []byte) {
 	defer c.mu.Unlock()
 	c.Map[key] = cacheEntry{
 		createdAt: time.Now(),
-		val:       val,
+		Val:       val,
 	}
 }
 
@@ -20,7 +20,7 @@ func (c *Cache) Get(key string) ([]byte, bool) {
 	if !ok {
 		return nil, false
 	}
-	return entry.val, true
+	return entry.Val, true
 }
 
 // if time.Duration stored in interval has passed, remove all entries older than that

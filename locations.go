@@ -19,12 +19,6 @@ type location struct {
 	URL  string `json:"url"`
 }
 
-type Config struct {
-	PokeClient client
-	NextPage   *string
-	PrevPage   *string
-}
-
 func (c *client) ListLocations(api *string) (PokeMap, error) {
 	url := API_URL
 	if api != nil {
@@ -37,6 +31,7 @@ func (c *client) ListLocations(api *string) (PokeMap, error) {
 		if err != nil {
 			return PokeMap{}, fmt.Errorf("error unmarshalling cached response: %v", err)
 		}
+		c.currentArea = locations
 		return locations, nil
 	}
 
@@ -60,5 +55,6 @@ func (c *client) ListLocations(api *string) (PokeMap, error) {
 	}
 
 	c.cache.Add(url, body)
+	c.currentArea = location
 	return location, nil
 }

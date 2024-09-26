@@ -12,7 +12,7 @@ type Cache struct {
 
 type cacheEntry struct {
 	createdAt time.Time
-	val       []byte
+	Val       []byte
 }
 
 func NewCache(interval time.Duration) Cache {
