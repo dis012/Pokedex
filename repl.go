@@ -35,6 +35,16 @@ func getCommands() map[string]cliCommand {
 			Description: "Explore a location and find pokemons in that location",
 			Command:     exploreCommand,
 		},
+		"catch": {
+			Name:        "Catch",
+			Description: "Catch a pokemon",
+			Command:     catchCommand,
+		},
+		"pokedex": {
+			Name:        "Pokedex",
+			Description: "Displays all caught pokemons",
+			Command:     pokedexCommand,
+		},
 	}
 }
 
@@ -56,6 +66,10 @@ func (c *client) startCLI(cnf *Config) {
 		if word == "explore" && len(words) > 1 {
 			location := words[1]
 			cnf.Location = location
+		}
+		if word == "catch" && len(words) > 1 {
+			pokemon := words[1]
+			cnf.Pokemon = pokemon
 		}
 		cliCommand, ok := commands[word]
 

@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 )
 
@@ -88,28 +86,58 @@ func exploreCommand(cnf *Config) error {
 	}
 
 	// Get the pokemons in the location
-	url := API_URL + cnf.Location
-	res, err := http.Get(url)
+	pokemon, err = cnf.PokeClient.ListPokemon(cnf.Location)
 	if err != nil {
 		return fmt.Errorf("error getting pokemons: %v", err)
 	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if res.StatusCode > 299 {
-		return fmt.Errorf("error getting pokemons: %s", body)
-	}
-	if err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
-	}
-
-	err = json.Unmarshal(body, &pokemon)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling response: %v", err)
-	}
-
 	for _, pok := range pokemon.PokemonEncounters {
 		fmt.Println(pok.Pokemon.Name)
 	}
 
+	return nil
+}
+
+func catchCommand(cnf *Config) error {
+	fmt.Println("Trying to catch ", cnf.Pokemon)
+	var coughtPokemon PokemonData
+	if cnf.Pokemon == "" {
+		fmt.Println("No pokemon provided")
+		return nil
+	}
+
+	err := cnf.checkPokemon()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	coughtPokemon, err = cnf.PokeClient.CatchPokemon(cnf.Pokemon)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Cought pokemon: ", coughtPokemon.Forms[0].Name)
+
+	return nil
+}
+
+func pokedexCommand(cnf *Config) error {
+	if len(cnf.PokeClient.myCoughtPokemons.Map) == 0 {
+		fmt.Println("No pokemons caught")
+		return nil
+	}
+	fmt.Println("Displaying all caught pokemons")
+	pokemons := cnf.PokeClient.myCoughtPokemons.GetAll()
+
+	for _, poke := range pokemons {
+		var pokemon PokemonData
+		err := json.Unmarshal(poke.Val, &pokemon)
+		if err != nil {
+			fmt.Println("Error unmarshalling pokemon data: ", err)
+			continue
+		}
+		fmt.Println(pokemon.Forms[0].Name)
+	}
 	return nil
 }

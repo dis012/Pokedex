@@ -32,6 +32,7 @@ func (c *client) ListLocations(api *string) (PokeMap, error) {
 			return PokeMap{}, fmt.Errorf("error unmarshalling cached response: %v", err)
 		}
 		c.currentArea = locations
+		fmt.Println("Using cached response")
 		return locations, nil
 	}
 
